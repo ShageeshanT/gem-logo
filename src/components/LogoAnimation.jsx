@@ -61,12 +61,13 @@ export default function LogoAnimation() {
       if (!ctrl) return Promise.resolve();
 
       if (isCenter) {
+        const centerDelay = 0.9;
         ctrl.set({ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 });
         return ctrl.start({
           opacity: 1, scale: 1,
           transition: {
-            scale:   { type: 'spring', stiffness: 200, damping: 20, delay },
-            opacity: { duration: 0.3, ease: 'easeOut', delay },
+            scale:   { type: 'spring', stiffness: 120, damping: 14, delay: centerDelay },
+            opacity: { duration: 0.5, ease: 'easeOut', delay: centerDelay },
           },
         });
       }
