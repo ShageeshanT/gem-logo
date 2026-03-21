@@ -1,11 +1,12 @@
-import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { motion, useAnimationControls } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { GEM_GROUPS } from './gemPaths';
 import './LogoAnimation.css';
 
 const BORDER_ID = 'gray-border';
+const LOOP_DURATION = 120_000; // 120 seconds max
+const HOLD_DURATION = 1500;   // hold assembled logo before disassembling
 
-// Pieces fly in from far beyond screen edges
 const FLIGHT_ORIGINS = {
   'crown-red':          { x: 0,     y: -5000 },
   'upper-left-pink':    { x: -4500, y: -3500 },
@@ -18,7 +19,6 @@ const FLIGHT_ORIGINS = {
   'left-magenta':       { x: -4500, y: -1500 },
 };
 
-// Animation order — center blue comes last
 const ANIM_ORDER = [
   'crown-red',
   'upper-right-orange',
@@ -31,26 +31,121 @@ const ANIM_ORDER = [
   'center-blue',
 ];
 
+// Reverse order for disassembly (center leaves first)
+const REVERSE_ORDER = [...ANIM_ORDER].reverse();
+
 export default function LogoAnimation() {
-  const [phase, setPhase] = useState('assembling');
+  const [direction, setDirection] = useState('in');   // 'in' | 'out'
+  const [glowing, setGlowing] = useState(false);
+  const startTime = useRef(Date.now());
+  const controlsMap = useRef({});
 
   const gemPieces = GEM_GROUPS.filter(g => g.id !== BORDER_ID);
 
-  const handleLastDone = () => {
-    setPhase('glowing');
-    setTimeout(() => setPhase('settled'), 900);
-  };
+  // Create controls for each piece
+  ANIM_ORDER.forEach(id => {
+    if (!controlsMap.current[id]) {
+      controlsMap.current[id] = null; // will be set via ref pattern
+    }
+  });
+
+  const animateIn = useCallback(async () => {
+    setGlowing(false);
+    setDirection('in');
+
+    // Stagger pieces flying in
+    const promises = ANIM_ORDER.map((pieceId, i) => {
+      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
+      const isCenter = pieceId === 'center-blue';
+      const delay = i * 0.07;
+      const ctrl = controlsMap.current[pieceId];
+      if (!ctrl) return Promise.resolve();
+
+      // Reset to origin instantly
+      ctrl.set({
+        x: origin.x,
+        y: origin.y,
+        opacity: 0,
+        scale: isCenter ? 0 : 0.5,
+      });
+
+      // Animate to center
+      return ctrl.start({
+        x: 0,
+        y: 0,
+        opacity: 1,
+        scale: 1,
+        transition: {
+          x: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
+          y: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
+          scale: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
+          opacity: { duration: 0.4, ease: 'easeOut', delay: delay + 0.6 },
+        },
+      });
+    });
+
+    await Promise.all(promises);
+
+    // Glow pulse
+    setGlowing(true);
+    await new Promise(r => setTimeout(r, HOLD_DURATION));
+    setGlowing(false);
+  }, []);
+
+  const animateOut = useCallback(async () => {
+    setDirection('out');
+
+    // Stagger pieces flying out in reverse order
+    const promises = REVERSE_ORDER.map((pieceId, i) => {
+      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
+      const isCenter = pieceId === 'center-blue';
+      const delay = i * 0.06;
+      const ctrl = controlsMap.current[pieceId];
+      if (!ctrl) return Promise.resolve();
+
+      return ctrl.start({
+        x: origin.x,
+        y: origin.y,
+        opacity: 0,
+        scale: isCenter ? 0 : 0.5,
+        transition: {
+          x: { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
+          y: { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
+          scale: { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
+          opacity: { duration: 0.3, ease: 'easeIn', delay: delay + 0.8 },
+        },
+      });
+    });
+
+    await Promise.all(promises);
+    // Small pause before next cycle
+    await new Promise(r => setTimeout(r, 400));
+  }, []);
+
+  const runLoop = useCallback(async () => {
+    while (Date.now() - startTime.current < LOOP_DURATION) {
+      await animateIn();
+      if (Date.now() - startTime.current >= LOOP_DURATION) break;
+      await animateOut();
+    }
+    // Final assembly — end on assembled state
+    await animateIn();
+  }, [animateIn, animateOut]);
+
+  useEffect(() => {
+    // Wait for controls to be registered, then start
+    const timer = setTimeout(() => runLoop(), 100);
+    return () => clearTimeout(timer);
+  }, [runLoop]);
 
   return (
     <div className="logo-container">
       <div className="logo-sizer">
         <svg
-          className={`gem-svg ${phase === 'glowing' ? 'glow-active' : ''} ${phase === 'settled' ? 'glow-settled' : ''}`}
+          className={`gem-svg ${glowing ? 'glow-active' : ''}`}
           viewBox="0 0 1288 2000"
           xmlns="http://www.w3.org/2000/svg"
-          style={{ opacity: phase === 'settled' ? 0 : 1 }}
         >
-          {/* Define clip-paths from each group's actual SVG paths */}
           <defs>
             {gemPieces.map(group => (
               <clipPath key={`clip-${group.id}`} id={`clip-${group.id}`}>
@@ -61,82 +156,53 @@ export default function LogoAnimation() {
             ))}
           </defs>
 
-          {/* Each piece = full PNG image clipped to that facet's shape */}
-          {ANIM_ORDER.map((pieceId, orderIndex) => {
+          {ANIM_ORDER.map((pieceId) => {
             const group = gemPieces.find(g => g.id === pieceId);
             if (!group) return null;
-            const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
-            const isCenter = pieceId === 'center-blue';
-            const isLast = orderIndex === ANIM_ORDER.length - 1;
-            const delay = orderIndex * 0.07;
 
             return (
-              <motion.g
+              <PieceGroup
                 key={group.id}
-                clipPath={`url(#clip-${group.id})`}
-                initial={{
-                  x: origin.x,
-                  y: origin.y,
-                  opacity: 0,
-                  scale: isCenter ? 0 : 0.5,
-                }}
-                animate={{
-                  x: 0,
-                  y: 0,
-                  opacity: 1,
-                  scale: 1,
-                }}
-                transition={{
-                  x: {
-                    type: 'tween',
-                    ease: [0.12, 1, 0.25, 1],
-                    duration: 1.8,
-                    delay,
-                  },
-                  y: {
-                    type: 'tween',
-                    ease: [0.12, 1, 0.25, 1],
-                    duration: 1.8,
-                    delay,
-                  },
-                  scale: {
-                    type: 'tween',
-                    ease: [0.12, 1, 0.25, 1],
-                    duration: 1.8,
-                    delay,
-                  },
-                  opacity: {
-                    duration: 0.4,
-                    ease: 'easeOut',
-                    delay: delay + 0.6,
-                  },
-                }}
-                onAnimationComplete={isLast ? handleLastDone : undefined}
-              >
-                {/* Render the full logo image — clip-path reveals only this facet */}
-                <image
-                  href="/logo.png"
-                  x="0"
-                  y="0"
-                  width="1288"
-                  height="2000"
-                />
-              </motion.g>
+                group={group}
+                pieceId={pieceId}
+                controlsMap={controlsMap}
+              />
             );
           })}
         </svg>
-
-        {/* Final PNG — fades in after assembly for pixel-perfect result */}
-        <motion.img
-          className="final-logo"
-          src="/logo.png"
-          alt="Gem Logo"
-          draggable={false}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: phase === 'settled' ? 1 : 0 }}
-          transition={{ duration: 0.3 }}
-        />
       </div>
     </div>
+  );
+}
+
+function PieceGroup({ group, pieceId, controlsMap }) {
+  const controls = useAnimationControls();
+  const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
+  const isCenter = pieceId === 'center-blue';
+
+  useEffect(() => {
+    controlsMap.current[pieceId] = controls;
+    // Start at origin
+    controls.set({
+      x: origin.x,
+      y: origin.y,
+      opacity: 0,
+      scale: isCenter ? 0 : 0.5,
+    });
+  }, [controls, controlsMap, pieceId, origin.x, origin.y, isCenter]);
+
+  return (
+    <motion.g
+      clipPath={`url(#clip-${group.id})`}
+      animate={controls}
+    >
+      <image
+        href="/logo.png"
+        x="0"
+        y="0"
+        width="1288"
+        height="2000"
+      />
+    </motion.g>
   );
 }
