@@ -1,0 +1,61 @@
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background: #f8f9f5;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.logo-sizer {
+  position: relative;
+  width: min(22vw, 200px);
+  aspect-ratio: 1288 / 2000;
+}
+
+.gem-svg {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: opacity 0.3s ease;
+}
+
+.final-logo {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  pointer-events: none;
+}
+
+/* Glow pulse after assembly */
+.gem-svg.glow-active {
+  animation: glowPulse 0.8s ease-in-out forwards;
+}
+
+.gem-svg.glow-settled {
+  filter: drop-shadow(0 0 6px rgba(80, 120, 255, 0.12));
+}
+
+@keyframes glowPulse {
+  0% {
+    filter: drop-shadow(0 0 0px transparent) brightness(1);
+  }
+  35% {
+    filter: drop-shadow(0 0 30px rgba(100, 150, 255, 0.5)) brightness(1.15);
+  }
+  65% {
+    filter: drop-shadow(0 0 15px rgba(100, 150, 255, 0.25)) brightness(1.06);
+  }
+  100% {
+    filter: drop-shadow(0 0 6px rgba(80, 120, 255, 0.12)) brightness(1);
+  }
+}
