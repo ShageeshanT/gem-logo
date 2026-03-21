@@ -2,22 +2,38 @@ import { motion, useAnimationControls } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import './LogoAnimation.css';
 
+/* ── piece definitions ─────────────────────────────────── */
 const PIECES = [
-  { id: 'crown',              src: '/Crown.png',              from: { x: 0,     y: -2500 } },
-  { id: 'upper-left',         src: '/Upper-left.png',         from: { x: -2200, y: -1800 } },
-  { id: 'upper-right',        src: '/Upper-right.png',        from: { x: 2200,  y: -1800 } },
-  { id: 'right-orange',       src: '/Right-orange.png',       from: { x: 2500,  y: 500   } },
-  { id: 'left-magenta',       src: '/Left-magenta.png',       from: { x: -2200, y: -800  } },
-  { id: 'left-purple',        src: '/Left-purple.png',        from: { x: -2500, y: 800   } },
-  { id: 'bottom-left-teal',   src: '/Bottom-left-teal.png',   from: { x: -2000, y: 2000  } },
-  { id: 'bottom-green',       src: '/Bottom-green.png',       from: { x: 0,     y: 2500  } },
-  { id: 'bottom-right-yellow',src: '/Bottom-right-yellow.png',from: { x: 2000,  y: 2000  } },
-  { id: 'center',             src: '/Center.png',             from: { x: 0,     y: 0     } },
+  { id: 'crown',              src: '/Crown.png'              },
+  { id: 'upper-left',         src: '/Upper-left.png'         },
+  { id: 'upper-right',        src: '/Upper-right.png'        },
+  { id: 'right-orange',       src: '/Right-orange.png'       },
+  { id: 'left-magenta',       src: '/Left-magenta.png'       },
+  { id: 'left-purple',        src: '/Left-purple.png'        },
+  { id: 'bottom-left-teal',   src: '/Bottom-left-teal.png'   },
+  { id: 'bottom-green',       src: '/Bottom-green.png'       },
+  { id: 'bottom-right-yellow',src: '/Bottom-right-yellow.png'},
+  { id: 'center',             src: '/Center.png'             },
 ];
 
+/* Spiral: evenly space pieces around a circle, each from a different angle */
+const RADIUS = 2800;
+const PIECE_COUNT = PIECES.length;
+
+function getSpiralOrigin(index) {
+  // Golden-angle based spiral for organic, non-uniform spacing
+  const goldenAngle = 137.508 * (Math.PI / 180);
+  const angle = goldenAngle * index;
+  return {
+    x: Math.cos(angle) * RADIUS,
+    y: Math.sin(angle) * RADIUS,
+    rotate: (angle * 180 / Math.PI) + 180, // face inward as they spiral in
+  };
+}
+
 const ANIM_ORDER = [
-  'crown', 'upper-right', 'left-magenta', 'bottom-right-yellow',
-  'upper-left', 'bottom-left-teal', 'left-purple', 'right-orange',
+  'upper-right', 'left-magenta', 'bottom-right-yellow', 'crown',
+  'upper-left', 'right-orange', 'bottom-left-teal', 'left-purple',
   'bottom-green', 'center',
 ];
 
@@ -38,33 +54,36 @@ export default function LogoAnimation() {
     setShining(false);
 
     const promises = ANIM_ORDER.map((pieceId, i) => {
-      const piece = PIECES.find(p => p.id === pieceId);
-      if (!piece) return Promise.resolve();
       const isCenter = pieceId === 'center';
-      const delay = i * 0.07;
+      const origin = getSpiralOrigin(i);
+      const delay = i * 0.04;
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
       ctrl.set({
-        x: piece.from.x,
-        y: piece.from.y,
+        x: origin.x,
+        y: origin.y,
+        rotate: isCenter ? 0 : origin.rotate,
         opacity: 0,
-        scale: isCenter ? 0 : 0.5,
+        scale: isCenter ? 0 : 0.4,
       });
 
       return ctrl.start({
-        x: 0, y: 0, opacity: 1, scale: 1,
+        x: 0, y: 0, rotate: 0, opacity: 1, scale: 1,
         transition: {
-          x:       { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
-          y:       { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
-          scale:   { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
-          opacity: { duration: 0.25, ease: 'easeOut', delay },
+          // Different easing on x vs y creates the curved/spiral path
+          x:       { type: 'tween', ease: [0.0, 0.9, 0.2, 1], duration: 1.4, delay },
+          y:       { type: 'tween', ease: [0.15, 1, 0.3, 1],  duration: 1.4, delay },
+          rotate:  { type: 'tween', ease: [0.0, 0.8, 0.2, 1], duration: 1.4, delay },
+          scale:   { type: 'tween', ease: [0.0, 0.9, 0.2, 1], duration: 1.4, delay },
+          opacity: { duration: 0.2, ease: 'easeOut', delay },
         },
       });
     });
 
     await Promise.all(promises);
 
+    // Glow + shine after assembly
     setGlowing(true);
     setShining(true);
     shineControls.set({ y: '-150%' });
@@ -79,22 +98,25 @@ export default function LogoAnimation() {
 
   const animateOut = useCallback(async () => {
     const promises = REVERSE_ORDER.map((pieceId, i) => {
-      const piece = PIECES.find(p => p.id === pieceId);
-      if (!piece) return Promise.resolve();
       const isCenter = pieceId === 'center';
-      const delay = i * 0.06;
+      // Each piece spirals out to a NEW random-ish angle for variety
+      const outOrigin = getSpiralOrigin(i + PIECE_COUNT);
+      const delay = i * 0.05;
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
       return ctrl.start({
-        x: piece.from.x, y: piece.from.y,
+        x: outOrigin.x,
+        y: outOrigin.y,
+        rotate: isCenter ? 0 : -outOrigin.rotate,
         opacity: 0,
-        scale: isCenter ? 0 : 0.5,
+        scale: isCenter ? 0 : 0.4,
         transition: {
-          x:       { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
-          y:       { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
-          scale:   { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
-          opacity: { duration: 0.3, ease: 'easeIn', delay: delay + 0.8 },
+          x:       { type: 'tween', ease: [0.7, 0, 1, 0.3], duration: 1.5, delay },
+          y:       { type: 'tween', ease: [0.5, 0, 0.9, 0.2], duration: 1.5, delay },
+          rotate:  { type: 'tween', ease: [0.5, 0, 1, 0.3],  duration: 1.5, delay },
+          scale:   { type: 'tween', ease: [0.7, 0, 1, 0.3],  duration: 1.5, delay },
+          opacity: { duration: 0.3, ease: 'easeIn', delay: delay + 0.9 },
         },
       });
     });
@@ -142,13 +164,17 @@ function GemPiece({ piece, controlsMap }) {
 
   useEffect(() => {
     controlsMap.current[piece.id] = controls;
+    const origin = getSpiralOrigin(
+      ANIM_ORDER.indexOf(piece.id)
+    );
     controls.set({
-      x: piece.from.x,
-      y: piece.from.y,
+      x: origin.x,
+      y: origin.y,
+      rotate: isCenter ? 0 : origin.rotate,
       opacity: 0,
-      scale: isCenter ? 0 : 0.5,
+      scale: isCenter ? 0 : 0.4,
     });
-  }, [controls, controlsMap, piece.id, piece.from.x, piece.from.y, isCenter]);
+  }, [controls, controlsMap, piece.id, isCenter]);
 
   return (
     <motion.div className="gem-piece" animate={controls}>
