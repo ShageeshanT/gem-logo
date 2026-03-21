@@ -60,18 +60,28 @@ export default function LogoAnimation() {
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
+      if (isCenter) {
+        ctrl.set({ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 });
+        return ctrl.start({
+          opacity: 1, scale: 1,
+          transition: {
+            scale:   { type: 'spring', stiffness: 200, damping: 20, delay },
+            opacity: { duration: 0.3, ease: 'easeOut', delay },
+          },
+        });
+      }
+
       ctrl.set({
         x: origin.x,
         y: origin.y,
-        rotate: isCenter ? 0 : origin.rotate,
+        rotate: origin.rotate,
         opacity: 0,
-        scale: isCenter ? 0 : 0.4,
+        scale: 0.4,
       });
 
       return ctrl.start({
         x: 0, y: 0, rotate: 0, opacity: 1, scale: 1,
         transition: {
-          // Different easing on x vs y creates the curved/spiral path
           x:       { type: 'tween', ease: [0.0, 0.9, 0.2, 1], duration: 1.4, delay },
           y:       { type: 'tween', ease: [0.15, 1, 0.3, 1],  duration: 1.4, delay },
           rotate:  { type: 'tween', ease: [0.0, 0.8, 0.2, 1], duration: 1.4, delay },
@@ -105,12 +115,22 @@ export default function LogoAnimation() {
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
+      if (isCenter) {
+        return ctrl.start({
+          opacity: 0, scale: 0,
+          transition: {
+            scale:   { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 0.8, delay },
+            opacity: { duration: 0.3, ease: 'easeIn', delay: delay + 0.3 },
+          },
+        });
+      }
+
       return ctrl.start({
         x: outOrigin.x,
         y: outOrigin.y,
-        rotate: isCenter ? 0 : -outOrigin.rotate,
+        rotate: -outOrigin.rotate,
         opacity: 0,
-        scale: isCenter ? 0 : 0.4,
+        scale: 0.4,
         transition: {
           x:       { type: 'tween', ease: [0.7, 0, 1, 0.3], duration: 1.5, delay },
           y:       { type: 'tween', ease: [0.5, 0, 0.9, 0.2], duration: 1.5, delay },
