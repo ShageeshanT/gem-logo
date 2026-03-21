@@ -1,37 +1,30 @@
 import { motion, useAnimationControls } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GEM_GROUPS } from './gemPaths';
 import './LogoAnimation.css';
 
-const BORDER_ID = 'gray-border';
-const LOOP_DURATION = 120_000;
-const HOLD_DURATION = 1500;
-
-const FLIGHT_ORIGINS = {
-  'crown-red':          { x: 0,     y: -2500 },
-  'upper-left-pink':    { x: -2200, y: -1800 },
-  'upper-right-orange': { x: 2200,  y: -1800 },
-  'bottom-right-yellow':{ x: 2000,  y: 2000  },
-  'bottom-green':       { x: 0,     y: 2500  },
-  'bottom-left-teal':   { x: -2000, y: 2000  },
-  'center-blue':        { x: 0,     y: 0     },
-  'left-purple':        { x: -2500, y: 500   },
-  'left-magenta':       { x: -2200, y: -800  },
-};
+const PIECES = [
+  { id: 'crown',              src: '/Crown.png',              from: { x: 0,     y: -2500 } },
+  { id: 'upper-left',         src: '/Upper-left.png',         from: { x: -2200, y: -1800 } },
+  { id: 'upper-right',        src: '/Upper-right.png',        from: { x: 2200,  y: -1800 } },
+  { id: 'right-orange',       src: '/Right-orange.png',       from: { x: 2500,  y: 500   } },
+  { id: 'left-magenta',       src: '/Left-magenta.png',       from: { x: -2200, y: -800  } },
+  { id: 'left-purple',        src: '/Left-purple.png',        from: { x: -2500, y: 800   } },
+  { id: 'bottom-left-teal',   src: '/Bottom-left-teal.png',   from: { x: -2000, y: 2000  } },
+  { id: 'bottom-green',       src: '/Bottom-green.png',       from: { x: 0,     y: 2500  } },
+  { id: 'bottom-right-yellow',src: '/Bottom-right-yellow.png',from: { x: 2000,  y: 2000  } },
+  { id: 'center',             src: '/Center.png',             from: { x: 0,     y: 0     } },
+];
 
 const ANIM_ORDER = [
-  'crown-red',
-  'upper-right-orange',
-  'left-magenta',
-  'bottom-right-yellow',
-  'upper-left-pink',
-  'bottom-left-teal',
-  'left-purple',
-  'bottom-green',
-  'center-blue',
+  'crown', 'upper-right', 'left-magenta', 'bottom-right-yellow',
+  'upper-left', 'bottom-left-teal', 'left-purple', 'right-orange',
+  'bottom-green', 'center',
 ];
 
 const REVERSE_ORDER = [...ANIM_ORDER].reverse();
+
+const LOOP_DURATION = 120_000;
+const HOLD_DURATION = 1500;
 
 export default function LogoAnimation() {
   const [glowing, setGlowing] = useState(false);
@@ -40,35 +33,31 @@ export default function LogoAnimation() {
   const startTime = useRef(Date.now());
   const controlsMap = useRef({});
 
-  const gemPieces = GEM_GROUPS.filter(g => g.id !== BORDER_ID);
-
   const animateIn = useCallback(async () => {
     setGlowing(false);
     setShining(false);
 
     const promises = ANIM_ORDER.map((pieceId, i) => {
-      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -2500 };
-      const isCenter = pieceId === 'center-blue';
+      const piece = PIECES.find(p => p.id === pieceId);
+      if (!piece) return Promise.resolve();
+      const isCenter = pieceId === 'center';
       const delay = i * 0.07;
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
       ctrl.set({
-        x: origin.x,
-        y: origin.y,
+        x: piece.from.x,
+        y: piece.from.y,
         opacity: 0,
         scale: isCenter ? 0 : 0.5,
       });
 
       return ctrl.start({
-        x: 0,
-        y: 0,
-        opacity: 1,
-        scale: 1,
+        x: 0, y: 0, opacity: 1, scale: 1,
         transition: {
-          x: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
-          y: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
-          scale: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
+          x:       { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
+          y:       { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
+          scale:   { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
           opacity: { duration: 0.25, ease: 'easeOut', delay },
         },
       });
@@ -90,21 +79,21 @@ export default function LogoAnimation() {
 
   const animateOut = useCallback(async () => {
     const promises = REVERSE_ORDER.map((pieceId, i) => {
-      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -2500 };
-      const isCenter = pieceId === 'center-blue';
+      const piece = PIECES.find(p => p.id === pieceId);
+      if (!piece) return Promise.resolve();
+      const isCenter = pieceId === 'center';
       const delay = i * 0.06;
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
       return ctrl.start({
-        x: origin.x,
-        y: origin.y,
+        x: piece.from.x, y: piece.from.y,
         opacity: 0,
         scale: isCenter ? 0 : 0.5,
         transition: {
-          x: { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
-          y: { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
-          scale: { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
+          x:       { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
+          y:       { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
+          scale:   { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 1.4, delay },
           opacity: { duration: 0.3, ease: 'easeIn', delay: delay + 0.8 },
         },
       });
@@ -131,19 +120,13 @@ export default function LogoAnimation() {
   return (
     <div className="logo-container">
       <div className={`logo-sizer ${glowing ? 'glow-active' : ''}`}>
-        {ANIM_ORDER.map((pieceId) => {
-          const group = gemPieces.find(g => g.id === pieceId);
-          if (!group) return null;
-
-          return (
-            <GemPiece
-              key={group.id}
-              group={group}
-              pieceId={pieceId}
-              controlsMap={controlsMap}
-            />
-          );
-        })}
+        {PIECES.map((piece) => (
+          <GemPiece
+            key={piece.id}
+            piece={piece}
+            controlsMap={controlsMap}
+          />
+        ))}
 
         {shining && (
           <motion.div className="shine-line" animate={shineControls} />
@@ -153,51 +136,28 @@ export default function LogoAnimation() {
   );
 }
 
-function GemPiece({ group, pieceId, controlsMap }) {
+function GemPiece({ piece, controlsMap }) {
   const controls = useAnimationControls();
-  const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -2500 };
-  const isCenter = pieceId === 'center-blue';
+  const isCenter = piece.id === 'center';
 
   useEffect(() => {
-    controlsMap.current[pieceId] = controls;
+    controlsMap.current[piece.id] = controls;
     controls.set({
-      x: origin.x,
-      y: origin.y,
+      x: piece.from.x,
+      y: piece.from.y,
       opacity: 0,
       scale: isCenter ? 0 : 0.5,
     });
-  }, [controls, controlsMap, pieceId, origin.x, origin.y, isCenter]);
+  }, [controls, controlsMap, piece.id, piece.from.x, piece.from.y, isCenter]);
 
   return (
     <motion.div className="gem-piece" animate={controls}>
-      <svg
-        viewBox="0 0 1288 2000"
-        xmlns="http://www.w3.org/2000/svg"
-        className="gem-piece-svg"
-      >
-        <defs>
-          <filter id={`expand-${group.id}`}>
-            <feMorphology operator="dilate" radius="4" />
-          </filter>
-          <mask id={`mask-${group.id}`}>
-            <rect width="1288" height="2000" fill="black" />
-            <g filter={`url(#expand-${group.id})`}>
-              {group.paths.map((p, i) => (
-                <path key={i} d={p.d} fill="white" />
-              ))}
-            </g>
-          </mask>
-        </defs>
-        <g mask={`url(#mask-${group.id})`}>
-          <image
-            href="/logo.png"
-            x="0"
-            y="0"
-            width="1288"
-            height="2000"
-          />
-        </g>
-      </svg>
+      <img
+        src={piece.src}
+        alt=""
+        draggable={false}
+        className="gem-piece-img"
+      />
     </motion.div>
   );
 }

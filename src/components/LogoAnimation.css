@@ -4,7 +4,7 @@
   justify-content: center;
   width: 100vw;
   height: 100vh;
-  background: #f8f9f5;
+  background: #ffffff;
   overflow: hidden;
   position: fixed;
   top: 0;
@@ -14,7 +14,7 @@
 .logo-sizer {
   position: relative;
   width: min(22vw, 200px);
-  aspect-ratio: 1288 / 2000;
+  aspect-ratio: 1664 / 2582;
 }
 
 /* Each gem piece — absolutely positioned, full size of parent */
@@ -27,10 +27,13 @@
   will-change: transform, opacity;
 }
 
-.gem-piece-svg {
+.gem-piece-img {
   width: 100%;
   height: 100%;
   display: block;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Silver glow on the container */
