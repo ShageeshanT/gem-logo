@@ -44,13 +44,24 @@ export default function LogoAnimation() {
   return (
     <div className="logo-container">
       <div className="logo-sizer">
-        {/* SVG animation layer */}
         <svg
           className={`gem-svg ${phase === 'glowing' ? 'glow-active' : ''} ${phase === 'settled' ? 'glow-settled' : ''}`}
           viewBox="0 0 1288 2000"
           xmlns="http://www.w3.org/2000/svg"
           style={{ opacity: phase === 'settled' ? 0 : 1 }}
         >
+          {/* Define clip-paths from each group's actual SVG paths */}
+          <defs>
+            {gemPieces.map(group => (
+              <clipPath key={`clip-${group.id}`} id={`clip-${group.id}`}>
+                {group.paths.map((p, i) => (
+                  <path key={i} d={p.d} />
+                ))}
+              </clipPath>
+            ))}
+          </defs>
+
+          {/* Each piece = full PNG image clipped to that facet's shape */}
           {ANIM_ORDER.map((pieceId, orderIndex) => {
             const group = gemPieces.find(g => g.id === pieceId);
             if (!group) return null;
@@ -62,6 +73,7 @@ export default function LogoAnimation() {
             return (
               <motion.g
                 key={group.id}
+                clipPath={`url(#clip-${group.id})`}
                 initial={{
                   x: origin.x,
                   y: origin.y,
@@ -101,16 +113,14 @@ export default function LogoAnimation() {
                 }}
                 onAnimationComplete={isLast ? handleLastDone : undefined}
               >
-                {group.paths.map((p, i) => (
-                  <path
-                    key={i}
-                    fill={p.fill}
-                    d={p.d}
-                    stroke={p.fill}
-                    strokeWidth="2"
-                    strokeLinejoin="round"
-                  />
-                ))}
+                {/* Render the full logo image — clip-path reveals only this facet */}
+                <image
+                  href="/logo.png"
+                  x="0"
+                  y="0"
+                  width="1288"
+                  height="2000"
+                />
               </motion.g>
             );
           })}
