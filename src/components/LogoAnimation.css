@@ -36,12 +36,12 @@
     filter: drop-shadow(0 0 0px transparent) brightness(1);
   }
   30% {
-    filter: drop-shadow(0 0 35px rgba(100, 150, 255, 0.6)) brightness(1.18);
+    filter: drop-shadow(0 0 35px rgba(200, 210, 220, 0.7)) brightness(1.18);
   }
   60% {
-    filter: drop-shadow(0 0 18px rgba(100, 150, 255, 0.3)) brightness(1.08);
+    filter: drop-shadow(0 0 18px rgba(200, 210, 220, 0.35)) brightness(1.08);
   }
   100% {
-    filter: drop-shadow(0 0 6px rgba(80, 120, 255, 0.12)) brightness(1);
+    filter: drop-shadow(0 0 6px rgba(200, 210, 220, 0.15)) brightness(1);
   }
 }

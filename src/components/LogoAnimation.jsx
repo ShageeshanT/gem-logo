@@ -35,6 +35,8 @@ const REVERSE_ORDER = [...ANIM_ORDER].reverse();
 
 export default function LogoAnimation() {
   const [glowing, setGlowing] = useState(false);
+  const [shining, setShining] = useState(false);
+  const shineControls = useAnimationControls();
   const startTime = useRef(Date.now());
   const controlsMap = useRef({});
 
@@ -80,8 +82,16 @@ export default function LogoAnimation() {
     await Promise.all(promises);
 
     setGlowing(true);
+    setShining(true);
+    // Reset shine to top then sweep down
+    shineControls.set({ y: -400 });
+    shineControls.start({
+      y: 2400,
+      transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.15 },
+    });
     await new Promise(r => setTimeout(r, HOLD_DURATION));
     setGlowing(false);
+    setShining(false);
   }, []);
 
   const animateOut = useCallback(async () => {
@@ -140,6 +150,26 @@ export default function LogoAnimation() {
                 ))}
               </clipPath>
             ))}
+
+            {/* Full gem clip for the shine line */}
+            <clipPath id="clip-full-gem">
+              {gemPieces.flatMap(group =>
+                group.paths.map((p, i) => (
+                  <path key={`${group.id}-${i}`} d={p.d} />
+                ))
+              )}
+            </clipPath>
+
+            {/* Thin reflective line gradient */}
+            <linearGradient id="shine-line-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="white" stopOpacity="0" />
+              <stop offset="40%" stopColor="white" stopOpacity="0" />
+              <stop offset="48%" stopColor="white" stopOpacity="0.4" />
+              <stop offset="50%" stopColor="white" stopOpacity="1" />
+              <stop offset="52%" stopColor="white" stopOpacity="0.4" />
+              <stop offset="60%" stopColor="white" stopOpacity="0" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </linearGradient>
           </defs>
 
           {ANIM_ORDER.map((pieceId) => {
@@ -155,6 +185,19 @@ export default function LogoAnimation() {
               />
             );
           })}
+
+          {/* Shine line — horizontal bar sweeping top to bottom, clipped to gem */}
+          {shining && (
+            <g clipPath="url(#clip-full-gem)">
+              <motion.rect
+                x={0}
+                width={1288}
+                height={120}
+                fill="url(#shine-line-grad)"
+                animate={shineControls}
+              />
+            </g>
+          )}
         </svg>
       </div>
     </div>
