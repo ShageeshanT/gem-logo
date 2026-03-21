@@ -4,8 +4,8 @@ import { GEM_GROUPS } from './gemPaths';
 import './LogoAnimation.css';
 
 const BORDER_ID = 'gray-border';
-const LOOP_DURATION = 120_000; // 120 seconds max
-const HOLD_DURATION = 1500;   // hold assembled logo before disassembling
+const LOOP_DURATION = 120_000;
+const HOLD_DURATION = 1500;
 
 const FLIGHT_ORIGINS = {
   'crown-red':          { x: 0,     y: -5000 },
@@ -31,29 +31,24 @@ const ANIM_ORDER = [
   'center-blue',
 ];
 
-// Reverse order for disassembly (center leaves first)
 const REVERSE_ORDER = [...ANIM_ORDER].reverse();
 
 export default function LogoAnimation() {
-  const [direction, setDirection] = useState('in');   // 'in' | 'out'
   const [glowing, setGlowing] = useState(false);
   const startTime = useRef(Date.now());
   const controlsMap = useRef({});
 
   const gemPieces = GEM_GROUPS.filter(g => g.id !== BORDER_ID);
 
-  // Create controls for each piece
   ANIM_ORDER.forEach(id => {
     if (!controlsMap.current[id]) {
-      controlsMap.current[id] = null; // will be set via ref pattern
+      controlsMap.current[id] = null;
     }
   });
 
   const animateIn = useCallback(async () => {
     setGlowing(false);
-    setDirection('in');
 
-    // Stagger pieces flying in
     const promises = ANIM_ORDER.map((pieceId, i) => {
       const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
       const isCenter = pieceId === 'center-blue';
@@ -61,7 +56,6 @@ export default function LogoAnimation() {
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
-      // Reset to origin instantly
       ctrl.set({
         x: origin.x,
         y: origin.y,
@@ -69,7 +63,6 @@ export default function LogoAnimation() {
         scale: isCenter ? 0 : 0.5,
       });
 
-      // Animate to center
       return ctrl.start({
         x: 0,
         y: 0,
@@ -79,23 +72,19 @@ export default function LogoAnimation() {
           x: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
           y: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
           scale: { type: 'tween', ease: [0.12, 1, 0.25, 1], duration: 1.8, delay },
-          opacity: { duration: 0.4, ease: 'easeOut', delay: delay + 0.6 },
+          opacity: { duration: 0.25, ease: 'easeOut', delay },
         },
       });
     });
 
     await Promise.all(promises);
 
-    // Glow pulse
     setGlowing(true);
     await new Promise(r => setTimeout(r, HOLD_DURATION));
     setGlowing(false);
   }, []);
 
   const animateOut = useCallback(async () => {
-    setDirection('out');
-
-    // Stagger pieces flying out in reverse order
     const promises = REVERSE_ORDER.map((pieceId, i) => {
       const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
       const isCenter = pieceId === 'center-blue';
@@ -118,7 +107,6 @@ export default function LogoAnimation() {
     });
 
     await Promise.all(promises);
-    // Small pause before next cycle
     await new Promise(r => setTimeout(r, 400));
   }, []);
 
@@ -128,12 +116,10 @@ export default function LogoAnimation() {
       if (Date.now() - startTime.current >= LOOP_DURATION) break;
       await animateOut();
     }
-    // Final assembly — end on assembled state
     await animateIn();
   }, [animateIn, animateOut]);
 
   useEffect(() => {
-    // Wait for controls to be registered, then start
     const timer = setTimeout(() => runLoop(), 100);
     return () => clearTimeout(timer);
   }, [runLoop]);
@@ -182,7 +168,6 @@ function PieceGroup({ group, pieceId, controlsMap }) {
 
   useEffect(() => {
     controlsMap.current[pieceId] = controls;
-    // Start at origin
     controls.set({
       x: origin.x,
       y: origin.y,
