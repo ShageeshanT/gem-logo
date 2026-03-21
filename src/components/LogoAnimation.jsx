@@ -8,15 +8,15 @@ const LOOP_DURATION = 120_000;
 const HOLD_DURATION = 1500;
 
 const FLIGHT_ORIGINS = {
-  'crown-red':          { x: 0,     y: -5000 },
-  'upper-left-pink':    { x: -4500, y: -3500 },
-  'upper-right-orange': { x: 4500,  y: -3500 },
-  'bottom-right-yellow':{ x: 4000,  y: 3800  },
-  'bottom-green':       { x: 0,     y: 5000  },
-  'bottom-left-teal':   { x: -4000, y: 3800  },
+  'crown-red':          { x: 0,     y: -2500 },
+  'upper-left-pink':    { x: -2200, y: -1800 },
+  'upper-right-orange': { x: 2200,  y: -1800 },
+  'bottom-right-yellow':{ x: 2000,  y: 2000  },
+  'bottom-green':       { x: 0,     y: 2500  },
+  'bottom-left-teal':   { x: -2000, y: 2000  },
   'center-blue':        { x: 0,     y: 0     },
-  'left-purple':        { x: -5000, y: 1000  },
-  'left-magenta':       { x: -4500, y: -1500 },
+  'left-purple':        { x: -2500, y: 500   },
+  'left-magenta':       { x: -2200, y: -800  },
 };
 
 const ANIM_ORDER = [
@@ -42,17 +42,12 @@ export default function LogoAnimation() {
 
   const gemPieces = GEM_GROUPS.filter(g => g.id !== BORDER_ID);
 
-  ANIM_ORDER.forEach(id => {
-    if (!controlsMap.current[id]) {
-      controlsMap.current[id] = null;
-    }
-  });
-
   const animateIn = useCallback(async () => {
     setGlowing(false);
+    setShining(false);
 
     const promises = ANIM_ORDER.map((pieceId, i) => {
-      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
+      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -2500 };
       const isCenter = pieceId === 'center-blue';
       const delay = i * 0.07;
       const ctrl = controlsMap.current[pieceId];
@@ -83,20 +78,19 @@ export default function LogoAnimation() {
 
     setGlowing(true);
     setShining(true);
-    // Reset shine to top then sweep down
-    shineControls.set({ y: -400 });
+    shineControls.set({ y: '-150%' });
     shineControls.start({
-      y: 2400,
+      y: '150%',
       transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.15 },
     });
     await new Promise(r => setTimeout(r, HOLD_DURATION));
     setGlowing(false);
     setShining(false);
-  }, []);
+  }, [shineControls]);
 
   const animateOut = useCallback(async () => {
     const promises = REVERSE_ORDER.map((pieceId, i) => {
-      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
+      const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -2500 };
       const isCenter = pieceId === 'center-blue';
       const delay = i * 0.06;
       const ctrl = controlsMap.current[pieceId];
@@ -136,77 +130,32 @@ export default function LogoAnimation() {
 
   return (
     <div className="logo-container">
-      <div className="logo-sizer">
-        <svg
-          className={`gem-svg ${glowing ? 'glow-active' : ''}`}
-          viewBox="0 0 1288 2000"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            {gemPieces.map(group => (
-              <clipPath key={`clip-${group.id}`} id={`clip-${group.id}`}>
-                {group.paths.map((p, i) => (
-                  <path key={i} d={p.d} />
-                ))}
-              </clipPath>
-            ))}
+      <div className={`logo-sizer ${glowing ? 'glow-active' : ''}`}>
+        {ANIM_ORDER.map((pieceId) => {
+          const group = gemPieces.find(g => g.id === pieceId);
+          if (!group) return null;
 
-            {/* Full gem clip for the shine line */}
-            <clipPath id="clip-full-gem">
-              {gemPieces.flatMap(group =>
-                group.paths.map((p, i) => (
-                  <path key={`${group.id}-${i}`} d={p.d} />
-                ))
-              )}
-            </clipPath>
+          return (
+            <GemPiece
+              key={group.id}
+              group={group}
+              pieceId={pieceId}
+              controlsMap={controlsMap}
+            />
+          );
+        })}
 
-            {/* Thin reflective line gradient */}
-            <linearGradient id="shine-line-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="white" stopOpacity="0" />
-              <stop offset="40%" stopColor="white" stopOpacity="0" />
-              <stop offset="48%" stopColor="white" stopOpacity="0.4" />
-              <stop offset="50%" stopColor="white" stopOpacity="1" />
-              <stop offset="52%" stopColor="white" stopOpacity="0.4" />
-              <stop offset="60%" stopColor="white" stopOpacity="0" />
-              <stop offset="100%" stopColor="white" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-
-          {ANIM_ORDER.map((pieceId) => {
-            const group = gemPieces.find(g => g.id === pieceId);
-            if (!group) return null;
-
-            return (
-              <PieceGroup
-                key={group.id}
-                group={group}
-                pieceId={pieceId}
-                controlsMap={controlsMap}
-              />
-            );
-          })}
-
-          {/* Shine line — horizontal bar sweeping top to bottom, clipped to gem */}
-          {shining && (
-            <g clipPath="url(#clip-full-gem)">
-              <motion.rect
-                x={0}
-                width={1288}
-                height={120}
-                fill="url(#shine-line-grad)"
-                animate={shineControls}
-              />
-            </g>
-          )}
-        </svg>
+        {shining && (
+          <motion.div className="shine-line" animate={shineControls} />
+        )}
       </div>
     </div>
   );
 }
 
-function PieceGroup({ group, pieceId, controlsMap }) {
+function GemPiece({ group, pieceId, controlsMap }) {
   const controls = useAnimationControls();
-  const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -5000 };
+  const origin = FLIGHT_ORIGINS[pieceId] || { x: 0, y: -2500 };
   const isCenter = pieceId === 'center-blue';
 
   useEffect(() => {
@@ -220,17 +169,35 @@ function PieceGroup({ group, pieceId, controlsMap }) {
   }, [controls, controlsMap, pieceId, origin.x, origin.y, isCenter]);
 
   return (
-    <motion.g
-      clipPath={`url(#clip-${group.id})`}
-      animate={controls}
-    >
-      <image
-        href="/logo.png"
-        x="0"
-        y="0"
-        width="1288"
-        height="2000"
-      />
-    </motion.g>
+    <motion.div className="gem-piece" animate={controls}>
+      <svg
+        viewBox="0 0 1288 2000"
+        xmlns="http://www.w3.org/2000/svg"
+        className="gem-piece-svg"
+      >
+        <defs>
+          <filter id={`expand-${group.id}`}>
+            <feMorphology operator="dilate" radius="4" />
+          </filter>
+          <mask id={`mask-${group.id}`}>
+            <rect width="1288" height="2000" fill="black" />
+            <g filter={`url(#expand-${group.id})`}>
+              {group.paths.map((p, i) => (
+                <path key={i} d={p.d} fill="white" />
+              ))}
+            </g>
+          </mask>
+        </defs>
+        <g mask={`url(#mask-${group.id})`}>
+          <image
+            href="/logo.png"
+            x="0"
+            y="0"
+            width="1288"
+            height="2000"
+          />
+        </g>
+      </svg>
+    </motion.div>
   );
 }

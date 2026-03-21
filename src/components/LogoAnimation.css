@@ -17,17 +17,24 @@
   aspect-ratio: 1288 / 2000;
 }
 
-.gem-svg {
-  width: 100%;
-  height: 100%;
+/* Each gem piece — absolutely positioned, full size of parent */
+.gem-piece {
   position: absolute;
   top: 0;
   left: 0;
-  overflow: visible;
+  width: 100%;
+  height: 100%;
+  will-change: transform, opacity;
 }
 
-/* Glow pulse after assembly */
-.gem-svg.glow-active {
+.gem-piece-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Silver glow on the container */
+.logo-sizer.glow-active {
   animation: glowPulse 1s ease-in-out forwards;
 }
 
@@ -44,4 +51,25 @@
   100% {
     filter: drop-shadow(0 0 6px rgba(200, 210, 220, 0.15)) brightness(1);
   }
+}
+
+/* Thin reflective shine line */
+.shine-line {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 15%,
+    rgba(255, 255, 255, 0.9) 45%,
+    white 50%,
+    rgba(255, 255, 255, 0.9) 55%,
+    rgba(255, 255, 255, 0.2) 85%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 10;
 }
