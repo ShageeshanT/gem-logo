@@ -18,7 +18,6 @@ const PIECES = [
 
 /* Spiral: evenly space pieces around a circle, each from a different angle */
 const RADIUS = 2800;
-const PIECE_COUNT = PIECES.length;
 
 function getSpiralOrigin(index) {
   // Golden-angle based spiral for organic, non-uniform spacing
@@ -37,16 +36,10 @@ const ANIM_ORDER = [
   'bottom-green', 'center',
 ];
 
-const REVERSE_ORDER = [...ANIM_ORDER].reverse();
-
-const LOOP_DURATION = 120_000;
-const HOLD_DURATION = 1500;
-
 export default function LogoAnimation() {
   const [glowing, setGlowing] = useState(false);
   const [shining, setShining] = useState(false);
   const shineControls = useAnimationControls();
-  const startTime = useRef(Date.now());
   const controlsMap = useRef({});
 
   const animateIn = useCallback(async () => {
@@ -56,18 +49,19 @@ export default function LogoAnimation() {
     const promises = ANIM_ORDER.map((pieceId, i) => {
       const isCenter = pieceId === 'center';
       const origin = getSpiralOrigin(i);
-      const delay = i * 0.04;
+      const delay = i * 0.12;
       const ctrl = controlsMap.current[pieceId];
       if (!ctrl) return Promise.resolve();
 
       if (isCenter) {
-        const centerDelay = 0.9;
+        // Center waits for all outer pieces to mostly land
+        const centerDelay = 1.6;
         ctrl.set({ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0 });
         return ctrl.start({
           opacity: 1, scale: 1,
           transition: {
-            scale:   { type: 'spring', stiffness: 120, damping: 14, delay: centerDelay },
-            opacity: { duration: 0.5, ease: 'easeOut', delay: centerDelay },
+            scale:   { type: 'spring', stiffness: 80, damping: 12, delay: centerDelay },
+            opacity: { duration: 0.8, ease: 'easeOut', delay: centerDelay },
           },
         });
       }
@@ -77,88 +71,39 @@ export default function LogoAnimation() {
         y: origin.y,
         rotate: origin.rotate,
         opacity: 0,
-        scale: 0.4,
+        scale: 0.3,
       });
 
       return ctrl.start({
         x: 0, y: 0, rotate: 0, opacity: 1, scale: 1,
         transition: {
-          x:       { type: 'tween', ease: [0.0, 0.9, 0.2, 1], duration: 1.4, delay },
-          y:       { type: 'tween', ease: [0.15, 1, 0.3, 1],  duration: 1.4, delay },
-          rotate:  { type: 'tween', ease: [0.0, 0.8, 0.2, 1], duration: 1.4, delay },
-          scale:   { type: 'tween', ease: [0.0, 0.9, 0.2, 1], duration: 1.4, delay },
-          opacity: { duration: 0.2, ease: 'easeOut', delay },
+          // Slower, buttery ease — fast start, long deceleration into place
+          x:       { type: 'tween', ease: [0.0, 0.7, 0.15, 1], duration: 1.8, delay },
+          y:       { type: 'tween', ease: [0.1, 0.8, 0.2, 1],  duration: 1.8, delay },
+          rotate:  { type: 'tween', ease: [0.0, 0.6, 0.15, 1], duration: 1.8, delay },
+          scale:   { type: 'tween', ease: [0.0, 0.7, 0.15, 1], duration: 1.8, delay },
+          opacity: { duration: 0.4, ease: 'easeOut', delay },
         },
       });
     });
 
     await Promise.all(promises);
 
-    // Glow + shine after assembly
+    // Intense glow burst + shine after assembly
     setGlowing(true);
+    await new Promise(r => setTimeout(r, 200));
     setShining(true);
     shineControls.set({ y: '-150%' });
     shineControls.start({
       y: '150%',
-      transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.15 },
+      transition: { duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.3 },
     });
-    await new Promise(r => setTimeout(r, HOLD_DURATION));
-    setGlowing(false);
-    setShining(false);
   }, [shineControls]);
 
-  const animateOut = useCallback(async () => {
-    const promises = REVERSE_ORDER.map((pieceId, i) => {
-      const isCenter = pieceId === 'center';
-      // Each piece spirals out to a NEW random-ish angle for variety
-      const outOrigin = getSpiralOrigin(i + PIECE_COUNT);
-      const delay = i * 0.05;
-      const ctrl = controlsMap.current[pieceId];
-      if (!ctrl) return Promise.resolve();
-
-      if (isCenter) {
-        return ctrl.start({
-          opacity: 0, scale: 0,
-          transition: {
-            scale:   { type: 'tween', ease: [0.6, 0, 0.85, 0.15], duration: 0.8, delay },
-            opacity: { duration: 0.3, ease: 'easeIn', delay: delay + 0.3 },
-          },
-        });
-      }
-
-      return ctrl.start({
-        x: outOrigin.x,
-        y: outOrigin.y,
-        rotate: -outOrigin.rotate,
-        opacity: 0,
-        scale: 0.4,
-        transition: {
-          x:       { type: 'tween', ease: [0.7, 0, 1, 0.3], duration: 1.5, delay },
-          y:       { type: 'tween', ease: [0.5, 0, 0.9, 0.2], duration: 1.5, delay },
-          rotate:  { type: 'tween', ease: [0.5, 0, 1, 0.3],  duration: 1.5, delay },
-          scale:   { type: 'tween', ease: [0.7, 0, 1, 0.3],  duration: 1.5, delay },
-          opacity: { duration: 0.3, ease: 'easeIn', delay: delay + 0.9 },
-        },
-      });
-    });
-
-    await Promise.all(promises);
-    await new Promise(r => setTimeout(r, 400));
-  }, []);
-
-  const runLoop = useCallback(async () => {
-    while (Date.now() - startTime.current < LOOP_DURATION) {
-      await animateIn();
-      if (Date.now() - startTime.current >= LOOP_DURATION) break;
-      await animateOut();
-    }
-    await animateIn();
-  }, [animateIn, animateOut]);
-
   useEffect(() => {
-    const timer = setTimeout(() => runLoop(), 100);
+    const timer = setTimeout(() => animateIn(), 100);
     return () => clearTimeout(timer);
-  }, [runLoop]);
+  }, [animateIn]);
 
   return (
     <div className="logo-container">

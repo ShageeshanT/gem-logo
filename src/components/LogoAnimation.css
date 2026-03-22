@@ -38,21 +38,30 @@
 
 /* Silver glow on the container */
 .logo-sizer.glow-active {
-  animation: glowPulse 1s ease-in-out forwards;
+  animation: glowPulse 2.5s ease-in-out forwards;
 }
 
 @keyframes glowPulse {
   0% {
     filter: drop-shadow(0 0 0px transparent) brightness(1);
   }
-  30% {
-    filter: drop-shadow(0 0 35px rgba(200, 210, 220, 0.7)) brightness(1.18);
+  15% {
+    /* Intense flash — big white-silver burst */
+    filter: drop-shadow(0 0 60px rgba(220, 230, 255, 0.95))
+            drop-shadow(0 0 120px rgba(180, 200, 240, 0.5))
+            brightness(1.5);
   }
-  60% {
-    filter: drop-shadow(0 0 18px rgba(200, 210, 220, 0.35)) brightness(1.08);
+  30% {
+    filter: drop-shadow(0 0 40px rgba(210, 220, 240, 0.7))
+            drop-shadow(0 0 80px rgba(180, 200, 240, 0.3))
+            brightness(1.25);
+  }
+  55% {
+    filter: drop-shadow(0 0 15px rgba(200, 210, 225, 0.35)) brightness(1.08);
   }
   100% {
-    filter: drop-shadow(0 0 6px rgba(200, 210, 220, 0.15)) brightness(1);
+    /* Settle back to completely normal */
+    filter: drop-shadow(0 0 0px transparent) brightness(1);
   }
 }
 
